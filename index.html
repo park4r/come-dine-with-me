@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Come Dine With Me</title>
+<style>
+  :root {
+    --bg: #1b1430;
+    --card: #2a2045;
+    --card-2: #3a2d5e;
+    --accent: #ffb347;
+    --accent-2: #ff6f91;
+    --text: #ffffff;
+    --muted: #b8aed6;
+    --ok: #6ee7a8;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+  }
+  main { width: 100%; max-width: 480px; padding: 24px 16px 48px; }
+  h1 { font-size: 1.7rem; text-align: center; margin: 8px 0 4px; }
+  .subtitle { text-align: center; color: var(--muted); margin: 0 0 28px; }
+  h2 { font-size: 1.3rem; margin: 0 0 16px; text-align: center; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  button { font: inherit; border: 0; border-radius: 14px; cursor: pointer; color: var(--text); }
+  .primary {
+    width: 100%;
+    padding: 18px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1b1430;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .primary:disabled { opacity: 0.35; cursor: not-allowed; }
+  .secondary { width: 100%; padding: 14px; background: var(--card-2); }
+  .link {
+    display: block;
+    margin: 40px auto 0;
+    padding: 8px 12px;
+    background: none;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-decoration: underline;
+  }
+  .stack > * + * { margin-top: 12px; }
+
+  input {
+    width: 100%;
+    padding: 16px;
+    font: inherit;
+    font-size: 1.1rem;
+    color: var(--text);
+    background: var(--card);
+    border: 2px solid transparent;
+    border-radius: 14px;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  .error { color: var(--accent-2); min-height: 1.4em; text-align: center; margin: 12px 0; }
+
+  .name-btn {
+    width: 100%;
+    padding: 20px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    background: var(--card);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .name-btn:disabled { opacity: 0.5; cursor: default; }
+  .name-btn .tick { color: var(--ok); font-size: 0.95rem; font-weight: 500; }
+
+  .score-card { background: var(--card); border-radius: 16px; padding: 16px; }
+  .score-card + .score-card { margin-top: 14px; }
+  .score-card .who { font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; }
+  .score-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .score-grid button {
+    padding: 14px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    background: var(--card-2);
+  }
+  .score-grid button.selected {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #1b1430;
+  }
+
+  .center { text-align: center; }
+  .big-emoji { font-size: 4rem; margin: 24px 0 8px; }
+
+  #countdown-number {
+    font-size: 11rem;
+    font-weight: 800;
+    text-align: center;
+    margin-top: 18vh;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .pop { animation: pop 0.9s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(1.6); opacity: 0; }
+    30% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.85; }
+  }
+
+  #winner-screen .label { color: var(--muted); font-size: 1.2rem; margin-top: 12vh; }
+  #winner-name {
+    font-size: 3rem;
+    font-weight: 800;
+    margin: 12px 0;
+    line-height: 1.1;
+    word-break: break-word;
+    animation: reveal 1.2s cubic-bezier(.2,1.6,.4,1);
+  }
+  @keyframes reveal {
+    from { transform: scale(0.2); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--card); border-radius: 18px; padding: 24px; width: 100%; max-width: 400px; }
+  .modal h3 { margin: 0 0 8px; font-size: 1.3rem; }
+  .modal p { color: var(--muted); margin: 0 0 20px; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button { flex: 1; padding: 14px; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- Setup: enter the four player names -->
+  <section id="setup-screen" class="screen">
+    <h1>🍽️ Come Dine With Me</h1>
+    <p class="subtitle">Enter the four players</p>
+    <form id="setup-form" class="stack" autocomplete="off">
+      <input name="p" placeholder="Player 1" maxlength="20">
+      <input name="p" placeholder="Player 2" maxlength="20">
+      <input name="p" placeholder="Player 3" maxlength="20">
+      <input name="p" placeholder="Player 4" maxlength="20">
+      <div class="error" id="setup-error"></div>
+      <button class="primary" type="submit">Start</button>
+    </form>
+  </section>
+
+  <!-- Pick who is voting -->
+  <section id="names-screen" class="screen">
+    <h1>🍽️ Come Dine With Me</h1>
+    <p class="subtitle" id="names-subtitle">Who's scoring?</p>
+    <div id="names-list" class="stack"></div>
+    <div id="reveal-area" style="margin-top: 28px; display: none;">
+      <button class="primary" id="reveal-btn">🏆 Reveal winner</button>
+    </div>
+    <button class="link" data-action="reset">Reset game</button>
+  </section>
+
+  <!-- Enter scores for the other three -->
+  <section id="score-screen" class="screen">
+    <h2 id="score-title"></h2>
+    <p class="subtitle">Score each host out of 10</p>
+    <div id="score-cards"></div>
+    <div class="stack" style="margin-top: 24px;">
+      <button class="primary" id="submit-btn" disabled>Submit scores</button>
+      <button class="secondary" id="back-btn">Not me, go back</button>
+    </div>
+  </section>
+
+  <!-- Hide scores between players -->
+  <section id="pass-screen" class="screen center">
+    <div class="big-emoji">📱</div>
+    <h2 id="pass-title"></h2>
+    <p class="subtitle" id="pass-text"></p>
+    <button class="primary" id="pass-btn">Continue</button>
+  </section>
+
+  <section id="countdown-screen" class="screen">
+    <div id="countdown-number">10</div>
+  </section>
+
+  <section id="winner-screen" class="screen center">
+    <div class="label" id="winner-label">And the winner is…</div>
+    <div class="big-emoji">🏆</div>
+    <div id="winner-name"></div>
+    <button class="link" data-action="reset">Start a new game</button>
+  </section>
+
+</main>
+
+<div class="modal-backdrop" id="modal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="modal-title"></h3>
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button class="secondary" id="modal-cancel">Cancel</button>
+      <button class="primary" id="modal-confirm"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'come-dine-with-me';
+
+  // state = { players: [names], votes: { voter: { player: score } }, revealed: bool }
+  let state = load();
+  let currentVoter = null;
+  let currentScores = {};
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+  }
+
+  const $ = (id) => document.getElementById(id);
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
+    window.scrollTo(0, 0);
+  }
+
+  function el(tag, props = {}, children = []) {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...children);
+    return node;
+  }
+
+  // ---- Modal ----
+  let modalAction = null;
+  function confirmDialog(title, text, confirmLabel, onConfirm) {
+    $('modal-title').textContent = title;
+    $('modal-text').textContent = text;
+    $('modal-confirm').textContent = confirmLabel;
+    modalAction = onConfirm;
+    $('modal').classList.add('open');
+  }
+  function closeModal() { $('modal').classList.remove('open'); modalAction = null; }
+  $('modal-cancel').onclick = closeModal;
+  $('modal-confirm').onclick = () => { const action = modalAction; closeModal(); action?.(); };
+
+  // ---- Setup ----
+  $('setup-form').onsubmit = (e) => {
+    e.preventDefault();
+    const names = [...e.target.elements.p].map((i) => i.value.trim());
+    if (names.some((n) => !n)) return ($('setup-error').textContent = 'Please enter all four names.');
+    if (new Set(names.map((n) => n.toLowerCase())).size !== names.length) {
+      return ($('setup-error').textContent = 'Each name must be different.');
+    }
+    state = { players: names, votes: {}, revealed: false };
+    save();
+    renderNames();
+  };
+
+  // ---- Name selection ----
+  function renderNames() {
+    const list = $('names-list');
+    list.replaceChildren();
+    for (const name of state.players) {
+      const voted = Boolean(state.votes[name]);
+      const btn = el('button', { className: 'name-btn', disabled: voted }, [
+        el('span', { textContent: name }),
+        el('span', { className: 'tick', textContent: voted ? '✓ Scored' : '' }),
+      ]);
+      btn.onclick = () => startScoring(name);
+      list.append(btn);
+    }
+    const allVoted = state.players.every((p) => state.votes[p]);
+    $('reveal-area').style.display = allVoted ? 'block' : 'none';
+    $('names-subtitle').textContent = allVoted ? 'Everyone has scored!' : "Who's scoring?";
+    show('names-screen');
+  }
+
+  // ---- Scoring ----
+  function startScoring(voter) {
+    currentVoter = voter;
+    currentScores = {};
+    $('score-title').textContent = `${voter}'s scores`;
+    const cards = $('score-cards');
+    cards.replaceChildren();
+
+    for (const player of state.players.filter((p) => p !== voter)) {
+      const grid = el('div', { className: 'score-grid' });
+      for (let n = 1; n <= 10; n++) {
+        const btn = el('button', { textContent: n });
+        btn.onclick = () => {
+          currentScores[player] = n;
+          grid.querySelectorAll('button').forEach((b) => b.classList.toggle('selected', b === btn));
+          $('submit-btn').disabled = Object.keys(currentScores).length < state.players.length - 1;
+        };
+        grid.append(btn);
+      }
+      cards.append(el('div', { className: 'score-card' }, [el('div', { className: 'who', textContent: player }), grid]));
+    }
+
+    $('submit-btn').disabled = true;
+    show('score-screen');
+  }
+
+  $('back-btn').onclick = renderNames;
+
+  $('submit-btn').onclick = () => {
+    confirmDialog(
+      'Submit your scores?',
+      'This cannot be undone once submitted.',
+      'Submit',
+      () => {
+        state.votes[currentVoter] = currentScores;
+        save();
+        const allVoted = state.players.every((p) => state.votes[p]);
+        $('pass-title').textContent = `Thanks, ${currentVoter}!`;
+        $('pass-text').textContent = allVoted
+          ? 'Everyone has scored. Get ready for the big reveal…'
+          : 'Pass the phone to the next person.';
+        show('pass-screen');
+      }
+    );
+  };
+
+  $('pass-btn').onclick = renderNames;
+
+  // ---- Reveal ----
+  function winners() {
+    const totals = Object.fromEntries(state.players.map((p) => [p, 0]));
+    for (const scores of Object.values(state.votes)) {
+      for (const [player, score] of Object.entries(scores)) totals[player] += score;
+    }
+    const top = Math.max(...Object.values(totals));
+    return state.players.filter((p) => totals[p] === top);
+  }
+
+  function showWinner() {
+    const names = winners();
+    $('winner-label').textContent = names.length > 1 ? "It's a tie! The winners are…" : 'And the winner is…';
+    $('winner-name').textContent = names.join(' & ');
+    show('winner-screen');
+  }
+
+  $('reveal-btn').onclick = () => {
+    const number = $('countdown-number');
+    let n = 10;
+    const tick = () => {
+      number.textContent = n;
+      number.classList.remove('pop');
+      void number.offsetWidth; // restart the animation
+      number.classList.add('pop');
+    };
+    show('countdown-screen');
+    tick();
+    const timer = setInterval(() => {
+      n--;
+      if (n < 0) {
+        clearInterval(timer);
+        state.revealed = true;
+        save();
+        showWinner();
+      } else {
+        tick();
+      }
+    }, 1000);
+  };
+
+  // ---- Reset ----
+  document.querySelectorAll('[data-action="reset"]').forEach((btn) => {
+    btn.onclick = () =>
+      confirmDialog('Reset the game?', 'All names and scores will be deleted.', 'Reset', () => {
+        state = null;
+        try { localStorage.removeItem(STORAGE_KEY); } catch {}
+        $('setup-form').reset();
+        $('setup-error').textContent = '';
+        show('setup-screen');
+      });
+  });
+
+  // ---- Start ----
+  if (!state) show('setup-screen');
+  else if (state.revealed) showWinner();
+  else renderNames();
+</script>
+</body>
+</html>
